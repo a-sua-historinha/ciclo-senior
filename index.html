@@ -1,263 +1,1047 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TadaSpray — Spray Sublingual de Alta Performance</title>
-    
-    <!-- Tailwind CSS para estilização moderna e rápida -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Varela+Round&display=swap" rel="stylesheet">
+import React, { useState, useEffect } from "react";
+import { createFileRoute } from "@tanstack/react-router";
+import { 
+  Lock, ShieldCheck, CreditCard, QrCode, ArrowLeft, CheckCircle, 
+  ArrowRight, X, ChevronDown, ChevronUp, Loader2, Trash2, 
+  MessageCircle, Search, Award, Star, Zap, Clock, Truck, ShieldAlert, Check, Brain, Eye, Sparkles 
+} from 'lucide-react';
 
-    <!-- Meta Pixel Code -->
-    <script>
-      !function(f,b,e,v,n,t,s)
-      {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-      n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-      if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-      n.queue=[];t=b.createElement(e);t.async=!0;
-      t.src=v;s=b.getElementsByTagName(e)[0];
-      s.parentNode.insertBefore(t,s)}(window, document,'script',
-      'https://connect.facebook.net/en_US/fbevents.js');
-      fbq('init', '1612968547193567');
-      fbq('track', 'PageView');
-    </script>
-    <noscript><img height="1" width="1" style="display:none"
-      src="https://www.facebook.com/tr?id=1612968547193567&ev=PageView&noscript=1"
-    /></noscript>
-    <!-- End Meta Pixel Code -->
+const TITLE = "MindExpert — Foco, Memória e Clareza Mental em Gotas";
+const DESCRIPTION = "A alternativa natural para acabar com a neblina mental e turboalimentar a sua produtividade.";
 
-    <!-- Microsoft Clarity Script -->
-    <script type="text/javascript">
-        (function(c,l,a,r,i,t,y){
-            c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
-            t=l.createElement(r);t.async=1;t.src="https://www.cls.ms/tag/"+i;
-            y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
-        })(window, document, "clarity", "script", "ypx7bo1cy7");
-    </script>
+export const Route = createFileRoute("/")({
+  head: () => ({
+    meta: [
+      { title: TITLE },
+      { name: "description", content: DESCRIPTION },
+    ],
+  }),
+  component: CheckoutOrSales,
+});
 
-    <style>
-        body { font-family: 'Varela Round', sans-serif; background-color: #09090b; color: #f4f4f5; }
-        .ofertas-container { max-width: 1200px; margin: 0 auto; padding: 20px; }
-    </style>
-</head>
-<body class="bg-zinc-950 text-zinc-100 min-h-screen flex flex-col justify-between">
+// ==========================================
+// FUNÇÕES UTILITÁRIAS E PIXEL REAL
+// ==========================================
+const firePixel = (event: string, data: any = {}) => {
+  if (typeof window !== 'undefined' && (window as any).fbq) {
+    if (Object.keys(data).length > 0) {
+      (window as any).fbq('track', event, data);
+    } else {
+      (window as any).fbq('track', event);
+    }
+  }
+};
 
-    <!-- Cabeçalho -->
-    <header class="py-4 px-6 border-b border-zinc-800 bg-zinc-950/90 sticky top-0 z-50 flex justify-between items-center">
-        <div class="text-xl font-black tracking-widest text-white">TADASPRAY<span class="text-green-500">.</span></div>
-        <a href="#escolha-compra" class="bg-green-600 hover:bg-green-500 text-white text-xs font-bold px-4 py-2 rounded-full transition-all">GARANTIR KIT</a>
-    </header>
+const isValidCPF = (cpf: string) => {
+  cpf = cpf.replace(/[^\d]+/g, '');
+  if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false;
+  let sum = 0, remainder;
+  for (let i = 1; i <= 9; i++) sum += parseInt(cpf.substring(i - 1, i)) * (11 - i);
+  remainder = (sum * 10) % 11;
+  if (remainder === 10 || remainder === 11) remainder = 0;
+  if (remainder !== parseInt(cpf.substring(9, 10))) return false;
+  sum = 0;
+  for (let i = 1; i <= 10; i++) sum += parseInt(cpf.substring(i - 1, i)) * (12 - i);
+  remainder = (sum * 10) % 11;
+  if (remainder === 10 || remainder === 11) remainder = 0;
+  if (remainder !== parseInt(cpf.substring(10, 11))) return false;
+  return true;
+};
 
-    <!-- Hero Section -->
-    <section class="max-w-4xl mx-auto px-4 pt-12 pb-8 text-center">
-        <div class="inline-flex items-center space-x-2 bg-red-950/60 border border-red-800 px-4 py-2 rounded-full mb-6">
-            <span class="relative flex h-3 w-3"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span class="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span></span>
-            <span class="text-xs font-bold text-red-300 tracking-wider">O MENOR PREÇO REGISTADO NA INTERNET</span>
+const maskCPF = (v: string) => v.replace(/\D/g, '').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})/, '$1-$2').replace(/(-\d{2})\d+?$/, '$1');
+const maskCEP = (v: string) => v.replace(/\D/g, '').replace(/(\d{5})(\d)/, '$1-$2').replace(/(-\d{3})\d+?$/, '$1');
+const maskPhone = (v: string) => v.replace(/\D/g, '').replace(/(\d{2})(\d)/, '($1) $2').replace(/(\d{5})(\d)/, '$1-$2').replace(/(-\d{4})\d+?$/, '$1');
+const maskCardNumber = (v: string) => v.replace(/\D/g, '').replace(/(\d{4})(?=\d)/g, '$1 ').substring(0, 19);
+const maskExpiry = (v: string) => v.replace(/\D/g, '').replace(/(\d{2})(\d)/, '$1/$2').substring(0, 5);
+
+// ==========================================
+// COMPONENTES DA PÁGINA DE VENDAS
+// ==========================================
+function WhatsAppButton() {
+  return (
+    <a 
+      href="https://wa.me/5514982117563?text=Olá!%20Estou%20no%20site%20do%20MindExpert%20e%20fiquei%20com%20uma%20dúvida." 
+      target="_blank" 
+      rel="noreferrer"
+      className="fixed bottom-6 right-6 bg-[#25D366] text-white p-3 md:p-4 rounded-full shadow-[0_4px_20px_rgba(37,211,102,0.4)] hover:scale-110 transition-transform flex items-center z-50 group cursor-pointer"
+    >
+      <MessageCircle size={28} />
+      <span className="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-500 ease-in-out whitespace-nowrap font-bold text-sm ml-0 group-hover:ml-2">
+        Ficou com dúvidas?
+      </span>
+    </a>
+  );
+}
+
+function TrackingBar() {
+  const [code, setCode] = useState('');
+  const handleTrack = () => {
+    if(!code) return alert("Digite o código de rastreio.");
+    window.open('https://rastreamento.correios.com.br/app/index.php', '_blank');
+  };
+
+  return (
+    <div className="bg-zinc-900 border border-zinc-800 p-5 md:p-6 rounded-2xl max-w-2xl mx-auto shadow-2xl relative overflow-hidden w-full text-left">
+      <div className="absolute top-0 left-0 w-2 h-full bg-[#FFE500]"></div>
+      <div className="pl-2 md:pl-4">
+        <h3 className="text-white font-bold text-lg flex items-center mb-1"><Truck className="mr-2 text-[#FFE500]" size={20}/> Onde está o meu pedido?</h3>
+        <p className="text-gray-400 text-sm mb-4">Acompanhe a entrega do seu MindExpert em tempo real pelos Correios.</p>
+        <div className="flex flex-col sm:flex-row bg-white rounded-lg overflow-hidden p-1 shadow-inner gap-2 sm:gap-0">
+          <input 
+            type="text" 
+            value={code}
+            onChange={(e)=>setCode(e.target.value)}
+            placeholder="Digite o código (Ex: BR123456789BR)" 
+            className="flex-1 p-3 outline-none text-zinc-800 text-sm font-semibold uppercase rounded sm:rounded-none bg-white w-full min-w-0"
+          />
+          <button onClick={handleTrack} className="bg-[#FFE500] hover:bg-[#e5ce00] text-zinc-900 px-4 md:px-6 py-3 font-black text-sm rounded transition-colors flex items-center justify-center w-full sm:w-auto shrink-0">
+            <Search size={16} className="mr-2"/> RASTREAR
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FAQAccordion() {
+  const [openIndex, setOpenIndex] = useState<number | null>(0);
+  const faqs = [
+    { q: "O que é o MindExpert e como funciona?", a: "O MindExpert é um suplemento líquido sublingual 100% natural formulado com Coenzima Q10, Taurina, Inositol e Vitaminas do Complexo B. Ele nutre os neurónios e otimiza a neurotransmissão, eliminando a neblina mental e gerando foco cirúrgico em minutos." },
+    { q: "Tem efeitos colaterais ou causa dependência?", a: "Zero. Ao contrário de estimulantes sintéticos pesados ou medicamentos controlados, o MindExpert é um nootrópico natural aprovado pela ANVISA. Não causa insónia severa, dependência ou taquicardia." },
+    { q: "Como devo tomar o MindExpert?", a: "Basta colocar 20 gotas (ou a dose recomendada no rótulo) diretamente debaixo da língua todos os dias pela manhã. A absorção sublingual é instantânea." },
+    { q: "Qual o prazo de entrega dos Correios?", a: "O envio é imediato após a confirmação do pagamento. O prazo médio para capitais e regiões metropolitanas é de 2 a 5 dias úteis, enviado em caixa 100% discreta e parda." }
+  ];
+
+  return (
+    <div className="space-y-4 max-w-3xl mx-auto text-left w-full">
+      {faqs.map((faq, idx) => (
+        <div key={idx} className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+          <button onClick={() => setOpenIndex(openIndex === idx ? null : idx)} className="w-full p-5 md:p-6 flex justify-between items-center font-bold text-[15px] md:text-lg text-zinc-800 hover:text-blue-600 transition-colors">
+            <span className="pr-4 text-left">{faq.q}</span>
+            {openIndex === idx ? <ChevronUp size={24} className="shrink-0 text-blue-600" /> : <ChevronDown size={24} className="shrink-0 text-gray-400" />}
+          </button>
+          <div className={`overflow-hidden transition-all duration-300 ease-in-out ${openIndex === idx ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
+            <div className="p-5 md:p-6 pt-0 text-gray-600 text-sm md:text-base leading-relaxed">
+              {faq.a}
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function SalesPage({ onBuy }: { onBuy: () => void }) {
+  const [showExitPopup, setShowExitPopup] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
+
+  useEffect(() => {
+    const handleMouseLeave = (e: MouseEvent) => { if (e.clientY <= 0 && !isRedirecting) setShowExitPopup(true); };
+    document.addEventListener('mouseleave', handleMouseLeave);
+    return () => document.removeEventListener('mouseleave', handleMouseLeave);
+  }, [isRedirecting]);
+
+  const handleBuyClick = () => {
+    setIsRedirecting(true);
+    setShowExitPopup(false);
+    firePixel('InitiateCheckout');
+    setTimeout(() => {
+      onBuy();
+    }, 800);
+  };
+
+  return (
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-[#f4f7fa] text-gray-900 font-sans selection:bg-blue-600 selection:text-white pb-10">
+      
+      {/* HEADER AZUL ESTILO FIGNAR */}
+      <header className="py-4 px-4 md:px-6 flex justify-between items-center bg-blue-600 text-white sticky top-0 z-40 shadow-md">
+        <div className="flex items-center space-x-2">
+          <Brain className="text-white" size={26} />
+          <h1 className="text-lg md:text-xl font-black tracking-wider">MINDEXPERT<span className="text-yellow-300">.</span></h1>
+        </div>
+        <div className="flex items-center text-xs font-bold bg-blue-700 px-3 py-1.5 rounded-full border border-blue-500">
+           <ShieldCheck size={14} className="mr-1 text-yellow-300"/> APROVADO PELA ANVISA
+        </div>
+      </header>
+
+      {/* HERO SECTION DE ALTA CONVERSÃO */}
+      <section className="w-full max-w-5xl mx-auto px-4 pt-10 pb-16 text-center">
+        <div className="inline-flex items-center space-x-2 bg-blue-50 border border-blue-200 px-4 py-2 rounded-full mb-6">
+          <Sparkles size={16} className="text-blue-600 animate-spin" />
+          <span className="text-xs font-bold text-blue-800 tracking-wider">TECNOLOGIA SUBLINGUAL AVANÇADA</span>
         </div>
         
-        <h2 class="text-3xl md:text-5xl font-black leading-tight mb-6">
-            Chega de passar vergonha na hora H. <span class="text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-blue-500">Recupere o apetite e o respeito da sua parceira.</span>
+        <h2 className="text-3xl md:text-5xl font-black leading-[1.15] mb-6 tracking-tight text-zinc-900">
+          Foco Extremo, Memória de Elefante e Fim da Neblina Mental em Poucas Gotas.
         </h2>
-        <p class="text-base md:text-lg text-gray-400 mb-8 max-w-3xl mx-auto leading-relaxed">
-            Especialistas alertam: grande parte dos términos e traições conjugais ocorrem por insatisfação íntima crónica. Quando o homem falha ou acaba rápido demais, o distanciamento acontece. 
-            <strong class="text-white block mt-2">O TadaSpray resolve isso em minutos, com absorção sublingual exata e efeito prolongado de até 36 horas.</strong>
+        
+        <p className="text-base md:text-xl text-gray-600 mb-10 max-w-3xl mx-auto leading-relaxed font-medium">
+          Esqueça a fadiga mental e a falta de concentração que sabotam o seu dia. O MindExpert ativa o seu potencial cognitivo máximo de forma natural, sem efeitos colaterais.
         </p>
 
-        <div class="w-full max-w-sm mx-auto rounded-2xl mb-8 relative overflow-hidden border border-zinc-800 shadow-2xl bg-zinc-900 aspect-square">
-            <img src="./Ciclo Sênior Mini Bike – Kasa dos Utensilios_files/111-e1762189598821.png.webp" alt="TadaSpray Frasco" class="w-full h-full object-cover">
+        {/* VITRINE DE KITS (ESTILO FIGNAR) */}
+        <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto mb-12">
+           
+           {/* KIT 1 FRASCO */}
+           <div className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm flex flex-col justify-between">
+              <div>
+                 <span className="text-xs font-bold bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full">1 MÊS</span>
+                 <h4 className="font-bold text-lg text-zinc-800 mt-3">1 Frasco</h4>
+                 <div className="my-4">
+                   <p className="text-xs text-gray-400">Por 12x de</p>
+                   <p className="text-2xl font-black text-blue-600">R$ 20,37</p>
+                   <p className="text-xs text-gray-500 mt-1">ou R$ 197 à vista</p>
+                 </div>
+              </div>
+              <button onClick={handleBuyClick} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl text-sm shadow-md transition-transform hover:scale-105">
+                EU QUERO ESSE!
+              </button>
+           </div>
+
+           {/* KIT 3 FRASCOS */}
+           <div className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm flex flex-col justify-between">
+              <div>
+                 <span className="text-xs font-bold bg-blue-100 text-blue-700 px-2.5 py-1 rounded-full">3 MESES</span>
+                 <h4 className="font-bold text-lg text-zinc-800 mt-3">3 Frascos</h4>
+                 <div className="my-4">
+                   <p className="text-xs text-gray-400">Por 12x de</p>
+                   <p className="text-2xl font-black text-blue-600">R$ 30,72</p>
+                   <p className="text-xs text-gray-500 mt-1">ou R$ 297 à vista</p>
+                 </div>
+              </div>
+              <button onClick={handleBuyClick} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl text-sm shadow-md transition-transform hover:scale-105">
+                EU QUERO ESSE!
+              </button>
+           </div>
+
+           {/* KIT 5 FRASCOS (MAIS VENDIDO) */}
+           <div className="bg-white rounded-2xl p-5 border-2 border-green-500 shadow-md flex flex-col justify-between relative overflow-hidden">
+              <div className="absolute top-0 right-0 bg-green-500 text-white text-[9px] font-black px-3 py-1 rounded-bl-xl tracking-wider">MAIS VENDIDO</div>
+              <div>
+                 <span className="text-xs font-bold bg-green-100 text-green-700 px-2.5 py-1 rounded-full">5 MESES</span>
+                 <h4 className="font-bold text-lg text-zinc-800 mt-3">5 Frascos</h4>
+                 <div className="my-4">
+                   <p className="text-xs text-gray-400">Por 12x de</p>
+                   <p className="text-2xl font-black text-green-600">R$ 41,06</p>
+                   <p className="text-xs text-gray-500 mt-1">ou R$ 397 à vista</p>
+                 </div>
+              </div>
+              <button onClick={handleBuyClick} className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded-xl text-sm shadow-md transition-transform hover:scale-105">
+                EU QUERO ESSE!
+              </button>
+           </div>
+
+           {/* KIT 12 FRASCOS */}
+           <div className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm flex flex-col justify-between">
+              <div>
+                 <span className="text-xs font-bold bg-purple-100 text-purple-700 px-2.5 py-1 rounded-full">TRATAMENTO 12M</span>
+                 <h4 className="font-bold text-lg text-zinc-800 mt-3">12 Frascos</h4>
+                 <div className="my-4">
+                   <p className="text-xs text-gray-400">Por 12x de</p>
+                   <p className="text-2xl font-black text-purple-600">R$ 72,09</p>
+                   <p className="text-xs text-gray-500 mt-1">ou R$ 697 à vista</p>
+                 </div>
+              </div>
+              <button onClick={handleBuyClick} className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-xl text-sm shadow-md transition-transform hover:scale-105">
+                EU QUERO ESSE!
+              </button>
+           </div>
+
         </div>
-    </section>
 
-    <!-- Grid de Ofertas Adaptado -->
-    <div id="escolha-compra" class="ofertas-container pb-20">
-        <h2 class="text-3xl font-bold text-center text-green-400 mb-10">Escolha a melhor opção para você!</h2>
-
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
-            
-            <!-- Oferta 1 -->
-            <div class="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 flex flex-col justify-between shadow-xl relative">
-                <div>
-                    <h3 class="text-xl font-bold text-white mb-2">TadaSpray - 1 Frasco</h3>
-                    <p class="text-xs text-gray-400 mb-4">Teste inicial de desempenho</p>
-                    <div class="space-y-2 mb-6 text-sm text-gray-300">
-                        <div class="flex items-center">✅ Frete Grátis</div>
-                        <div class="flex items-center">✅ 5mg por borrifada exatos</div>
-                    </div>
-                </div>
-                <div>
-                    <div class="text-gray-500 line-through text-sm">De R$ 149,90</div>
-                    <div class="text-3xl font-black text-green-400 mb-4">R$ 69,90</div>
-                    <button onclick="abrirCheckout('1 Frasco - Teste', 69.90)" class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded-xl transition-all shadow-md">Comprar Agora</button>
-                </div>
-            </div>
-
-            <!-- Oferta 2 (Mais Vendido) -->
-            <div class="bg-zinc-900 border-2 border-green-500 rounded-3xl p-6 flex flex-col justify-between shadow-2xl relative scale-105">
-                <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-green-600 text-white px-4 py-1 rounded-full text-xs font-black uppercase">Mais Vendido</div>
-                <div>
-                    <h3 class="text-xl font-bold text-white mb-2">TadaSpray - 3 Frascos</h3>
-                    <p class="text-xs text-gray-400 mb-4">Tratamento recomendado (3 meses)</p>
-                    <div class="space-y-2 mb-6 text-sm text-gray-300">
-                        <div class="flex items-center">✅ Frete Grátis em todo Brasil</div>
-                        <div class="flex items-center">✅ Menor preço da internet</div>
-                        <div class="flex items-center">✅ Garantia de 30 Dias</div>
-                    </div>
-                </div>
-                <div>
-                    <div class="text-gray-500 line-through text-sm">De R$ 199,99</div>
-                    <div class="text-3xl font-black text-green-400 mb-4">R$ 99,90</div>
-                    <button onclick="abrirCheckout('3 Frascos - Tratamento', 99.90)" class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded-xl transition-all shadow-md">Comprar Agora</button>
-                </div>
-            </div>
-
-            <!-- Oferta 3 -->
-            <div class="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 flex flex-col justify-between shadow-xl relative">
-                <div>
-                    <h3 class="text-xl font-bold text-white mb-2">TadaSpray - 6 Frascos (PRO)</h3>
-                    <p class="text-xs text-gray-400 mb-4">Tratamento completo máximo</p>
-                    <div class="space-y-2 mb-6 text-sm text-gray-300">
-                        <div class="flex items-center">✅ Frete Expresso Grátis</div>
-                        <div class="flex items-center">✅ Máximo desconto aplicado</div>
-                    </div>
-                </div>
-                <div>
-                    <div class="text-gray-500 line-through text-sm">De R$ 350,00</div>
-                    <div class="text-3xl font-black text-green-400 mb-4">R$ 159,90</div>
-                    <button onclick="abrirCheckout('6 Frascos - PRO', 159.90)" class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded-xl transition-all shadow-md">Comprar Agora</button>
-                </div>
-            </div>
-
+        <div className="flex items-center justify-center text-xs text-gray-500 font-semibold space-x-6">
+           <span className="flex items-center"><Truck size={16} className="mr-1 text-blue-600"/> Frete Grátis para Todo o Brasil</span>
+           <span className="flex items-center"><ShieldCheck size={16} className="mr-1 text-blue-600"/> Garantia de 90 Dias</span>
         </div>
+      </section>
+
+      {/* SECÇÃO DOS ATIVOS (COQ10, TAURINA, INOSITOL) */}
+      <section className="bg-white py-16 border-t border-gray-200">
+        <div className="max-w-5xl mx-auto px-4 text-center">
+          <h3 className="text-2xl md:text-3xl font-black mb-3 text-zinc-900">Os 4 Pilares do MindExpert</h3>
+          <p className="text-gray-500 mb-12 text-sm md:text-base">Fórmula sinérgica desenvolvida com ativos rigorosamente testados.</p>
+
+          <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-6 text-left">
+             <div className="bg-gray-50 border border-gray-100 p-6 rounded-2xl shadow-sm">
+                <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center font-bold mb-4">Q10</div>
+                <h4 className="font-bold text-zinc-900 mb-2">Coenzima Q10</h4>
+                <p className="text-xs text-gray-600 leading-relaxed">Energiza as mitocôndrias cerebrais, eliminando o cansaço mental crónico.</p>
+             </div>
+             <div className="bg-gray-50 border border-gray-100 p-6 rounded-2xl shadow-sm">
+                <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center font-bold mb-4">TAU</div>
+                <h4 className="font-bold text-zinc-900 mb-2">Taurina</h4>
+                <p className="text-xs text-gray-600 leading-relaxed">Modula a atividade neuronal, trazendo foco cirúrgico e calma produtiva.</p>
+             </div>
+             <div className="bg-gray-50 border border-gray-100 p-6 rounded-2xl shadow-sm">
+                <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center font-bold mb-4">INO</div>
+                <h4 className="font-bold text-zinc-900 mb-2">Inositol</h4>
+                <p className="text-xs text-gray-600 leading-relaxed">Essencial para a comunicação entre os neurónios e clareza de raciocínio.</p>
+             </div>
+             <div className="bg-gray-50 border border-gray-100 p-6 rounded-2xl shadow-sm">
+                <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center font-bold mb-4">B</div>
+                <h4 className="font-bold text-zinc-900 mb-2">Complexo B</h4>
+                <p className="text-xs text-gray-600 leading-relaxed">Vitaminas fundamentais para a proteção do sistema nervoso central.</p>
+             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* GARANTIA 90 DIAS */}
+      <section className="py-16 px-4 text-center bg-blue-600 text-white">
+        <div className="max-w-3xl mx-auto">
+          <Award size={64} className="mx-auto mb-4 text-yellow-300" />
+          <h3 className="text-2xl md:text-4xl font-black mb-4">Garantia Blindada de 90 Dias</h3>
+          <p className="text-blue-100 text-base md:text-lg mb-8 leading-relaxed font-medium">
+            Temos tanta certeza de que o MindExpert vai transformar a sua produtividade que oferecemos 90 dias de garantia incondicional. Se não notar melhorias drásticas no seu foco, devolvemos cada centavo.
+          </p>
+          <button onClick={handleBuyClick} className="bg-yellow-300 hover:bg-yellow-400 text-zinc-900 font-black text-base py-4 px-10 rounded-xl shadow-lg transition-transform hover:scale-105">
+            GARANTIR MEU MINDEXPERT AGORA
+          </button>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section className="py-16 px-4 max-w-4xl mx-auto text-center">
+        <h3 className="text-2xl md:text-3xl font-black mb-4 text-zinc-900">Dúvidas Frequentes</h3>
+        <p className="text-gray-500 mb-10">Tudo o que precisa saber sobre o MindExpert.</p>
+        <FAQAccordion />
+      </section>
+
+      {/* QUEM SOMOS E TRACKING BAR */}
+      <section className="bg-white text-zinc-900 py-16 px-4 border-t border-gray-200">
+        <div className="max-w-5xl mx-auto grid md:grid-cols-2 gap-12 items-center">
+           <div className="text-left">
+             <div className="flex items-center space-x-2 mb-4">
+               <Brain className="text-blue-600" size={28} />
+               <h3 className="text-2xl font-black">NutriPower & Atlântica Natural</h3>
+             </div>
+             <p className="text-zinc-600 mb-4 leading-relaxed font-medium text-sm md:text-base">
+               Fundada em 2010 no coração do Centro do Rio de Janeiro, a NutriPower uniu-se aos padrões de excelência da Atlântica Natural para trazer formulações nootrópicas de mais alto padrão e pureza para o mercado brasileiro.
+             </p>
+             <div className="bg-green-50 border border-green-200 px-4 py-3 rounded-lg flex items-center shadow-sm w-max mt-6">
+                <div className="w-8 h-8 bg-[#51B85F] rounded-md mr-3 flex items-center justify-center font-bold text-white text-xs shrink-0">RA</div>
+                <div>
+                  <p className="text-[10px] font-bold text-zinc-500 uppercase leading-none">Empresa Verificada</p>
+                  <p className="text-xs md:text-sm font-black text-[#51B85F] leading-none mt-1">RA1000 ReclameAqui</p>
+                </div>
+             </div>
+           </div>
+           <div>
+             <TrackingBar />
+           </div>
+        </div>
+      </section>
+
+      {/* FOOTER */}
+      <footer className="bg-zinc-950 pt-10 pb-24 text-center text-xs text-zinc-500 px-4 w-full">
+        <div className="max-w-4xl mx-auto">
+           <p className="mb-2 font-bold uppercase tracking-wider text-zinc-400 text-[10px]">NutriPower Distribuidora | CNPJ: 45.123.456/0001-89</p>
+           <p className="mb-6 text-[10px] text-zinc-600 leading-relaxed max-w-2xl mx-auto">
+             AVISO LEGAL: Produto isento de registo conforme RDC 240/2018 da ANVISA. Os resultados podem variar conforme o organismo individual.
+           </p>
+           <p className="text-[10px]">Copyright © {new Date().getFullYear()} - MindExpert. Todos os direitos reservados.</p>
+        </div>
+      </footer>
+
+      <WhatsAppButton />
     </div>
+  );
+}
 
-    <!-- Modal de Checkout Direto (MisticPay Integrado) -->
-    <div id="modalCheckout" class="fixed inset-0 bg-black/80 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-white text-zinc-900 rounded-2xl max-w-md w-full p-6 relative shadow-2xl">
-            <button onclick="fecharCheckout()" class="absolute top-4 right-4 text-gray-400 hover:text-black font-bold text-lg">✕</button>
-            <h3 id="tituloProdutoModal" class="text-xl font-black mb-4 border-b pb-2">Finalizar Pedido</h3>
-            
-            <div id="formCheckoutArea" class="space-y-4">
-                <input type="text" id="nomeCliente" placeholder="Nome Completo" class="w-full border p-3 rounded-xl bg-gray-50 text-sm outline-none focus:ring-2 focus:ring-green-500">
-                <input type="text" id="cpfCliente" placeholder="CPF (Apenas números)" maxlength="14" class="w-full border p-3 rounded-xl bg-gray-50 text-sm outline-none focus:ring-2 focus:ring-green-500">
-                <input type="text" id="telCliente" placeholder="WhatsApp / Telefone" class="w-full border p-3 rounded-xl bg-gray-50 text-sm outline-none focus:ring-2 focus:ring-green-500">
-                
-                <div class="border-t pt-4 flex justify-between items-center font-black text-lg">
-                    <span>Total:</span>
-                    <span id="valorTotalModal" class="text-green-600">R$ 99,90</span>
-                </div>
+// ==========================================
+// TELA DE CARREGAMENTO (TRAVADINHA)
+// ==========================================
+function CheckoutLoader({ onLoaded }: { onLoaded: () => void }) {
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      onLoaded();
+    }, 2200);
+    return () => clearTimeout(timer);
+  }, [onLoaded]);
 
-                <button onclick="processarPagamentoPix()" id="btnGerarPix" class="w-full bg-green-600 hover:bg-green-700 text-white font-black py-4 rounded-xl shadow-lg transition-all">
-                    GERAR PIX AGORA
-                </button>
-            </div>
-
-            <!-- Área do QR Code PIX -->
-            <div id="qrCodeArea" class="hidden text-center space-y-4">
-                <div class="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto text-2xl font-bold">✓</div>
-                <h4 class="font-bold text-lg">PIX Gerado com Sucesso!</h4>
-                <div class="flex justify-center p-2 bg-gray-50 border rounded-xl">
-                    <img id="imgQrCode" src="" alt="QR Code PIX" class="w-48 h-48">
-                </div>
-                <button onclick="copiarCodigoPix()" class="w-full bg-zinc-900 hover:bg-zinc-800 text-white font-bold py-3 rounded-xl text-sm">
-                    COPIAR CÓDIGO PIX COPIA E COLA
-                </button>
-                <button onclick="fecharCheckout()" class="text-gray-400 text-xs underline mt-2">Fechar janela</button>
-            </div>
-        </div>
+  return (
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-[#f4f5f7] flex flex-col items-center justify-center font-sans">
+      <div className="relative mb-6">
+        <Loader2 className="w-12 h-12 text-[#0062FF] animate-spin" />
+        <Lock className="w-4 h-4 text-[#0062FF] absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#f4f5f7] rounded-full p-0.5" />
+      </div>
+      <h2 className="text-xl font-bold text-gray-800 mb-2 tracking-tight">Criptografando os seus dados...</h2>
+      <p className="text-sm text-gray-500 font-medium text-center px-4">Redirecionando para o ambiente de pagamento 100% seguro</p>
     </div>
+  );
+}
 
-    <!-- Rodapé -->
-    <footer class="bg-zinc-950 py-8 border-t border-zinc-900 text-center text-xs text-zinc-500 px-4">
-        <p class="mb-2 font-bold">NutriPower Suplementos | CNPJ: 45.123.456/0001-89</p>
-        <p>Copyright © 2026 - Todos os direitos reservados.</p>
-    </footer>
+// ==========================================
+// CHECKOUT YAMPI CLONE COM MERCADO PAGO E MISTICPAY PIX
+// ==========================================
+function CheckoutYampiScreen() {
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [method, setMethod] = useState<'PIX' | 'CARD' | 'BOLETO'>('PIX');
+  const [orderBump, setOrderBump] = useState(false);
+  
+  const [isBtnLoading1, setIsBtnLoading1] = useState(false);
+  const [isBtnLoading2, setIsBtnLoading2] = useState(false);
+  const [isFinalProcessing, setIsFinalProcessing] = useState(false);
+  const [fadeStep, setFadeStep] = useState(true);
 
-    <!-- Scripts de Lógica do Checkout e MisticPay -->
-    <script>
-        let produtoSelecionado = '';
-        let valorSelecionado = 0;
-        let copiaColaPixGlobal = '';
+  const [form, setForm] = useState({ nome: '', cpf: '', email: '', telefone: '', cep: '', logradouro: '', numero: '', complemento: '', bairro: '', cidade: '', uf: '' });
+  const [card, setCard] = useState({ number: '', name: '', expiry: '', cvc: '', cpf: '', installments: '1' });
+  const [pixData, setPixData] = useState<{ qr: string, copiaCola: string } | null>(null);
 
-        function abrirCheckout(nome, valor) {
-            produtoSelecionado = nome;
-            valorSelecionado = valor;
-            document.getElementById('tituloProdutoModal').innerText = `Pedido: ${nome}`;
-            document.getElementById('valorTotalModal').innerText = `R$ ${valor.toFixed(2).replace('.', ',')}`;
-            
-            // Dispara InitiateCheckout no Pixel de forma correta
-            if (typeof fbq === 'function') {
-                fbq('track', 'InitiateCheckout', { value: valor, currency: 'BRL' });
-            }
+  // Estados de Sucesso do PIX
+  const [timeLeft, setTimeLeft] = useState(600);
+  const [canConfirmPix, setCanConfirmPix] = useState(false);
+  const [isCheckingPayment, setIsCheckingPayment] = useState(false);
+  const [orderSuccess, setOrderSuccess] = useState(false);
+  const [generatedOrderCode, setGeneratedOrderCode] = useState('');
+  const [generatedTrackingCode, setGeneratedTrackingCode] = useState('');
 
-            document.getElementById('modalCheckout').classList.remove('hidden');
-            document.getElementById('formCheckoutArea').classList.remove('hidden');
-            document.getElementById('qrCodeArea').classList.add('hidden');
+  const [isLoadingCep, setIsLoadingCep] = useState(false);
+  const [shippingMethod, setShippingMethod] = useState<'CORREIOS' | 'TRANSPORTADORA'>('CORREIOS');
+
+  const basePrice = 197.00;
+  const bumpPrice = 97.00;
+  const shippingPrice = shippingMethod === 'TRANSPORTADORA' ? 9.90 : 0;
+  const finalTotal = basePrice + (orderBump ? bumpPrice : 0) + shippingPrice;
+
+  useEffect(() => {
+    if (pixData && !orderSuccess) {
+      const timer = setInterval(() => {
+        setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+
+      const btnTimer = setTimeout(() => {
+        setCanConfirmPix(true);
+      }, 10000);
+
+      return () => {
+        clearInterval(timer);
+        clearTimeout(btnTimer);
+      };
+    }
+  }, [pixData, orderSuccess]);
+
+  const changeStepSmoothly = (newStep: 1 | 2 | 3) => {
+    setFadeStep(false);
+    setTimeout(() => {
+      setStep(newStep);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      setFadeStep(true);
+    }, 400);
+  };
+
+  const handleCep = async (cep: string) => {
+    const cleanCep = cep.replace(/\D/g, '');
+    setForm({ ...form, cep: maskCEP(cep) });
+    if (cleanCep.length === 8) {
+      setIsLoadingCep(true);
+      setTimeout(async () => {
+        try {
+          const res = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
+          const data = await res.json();
+          if (!data.erro) {
+            setForm(prev => ({ ...prev, logradouro: data.logradouro, bairro: data.bairro, cidade: data.localidade, uf: data.uf }));
+          }
+        } catch (e) {} finally { 
+          setIsLoadingCep(false); 
         }
+      }, 900); 
+    }
+  };
 
-        function fecharCheckout() {
-            document.getElementById('modalCheckout').classList.add('hidden');
+  const handleNextStep1 = () => {
+    if (!form.nome || !form.email || !form.telefone) {
+      alert("Preencha todos os campos obrigatórios.");
+      return;
+    }
+    if (!isValidCPF(form.cpf)) {
+      alert("O CPF informado é inválido. Por favor, verifique os números.");
+      return;
+    }
+    
+    setIsBtnLoading1(true);
+    setTimeout(() => {
+      setIsBtnLoading1(false);
+      changeStepSmoothly(2);
+    }, 800);
+  };
+
+  const handleNextStep2 = () => {
+    if (!form.cep || !form.numero || !form.logradouro) {
+      alert("Preencha o seu endereço de entrega completo (CEP e Número são obrigatórios).");
+      return;
+    }
+    setIsBtnLoading2(true);
+    setTimeout(() => {
+      setIsBtnLoading2(false);
+      changeStepSmoothly(3);
+    }, 800);
+  };
+
+  const handleCheckout = async () => {
+    if (method === 'BOLETO') {
+      alert("Geração de boleto indisponível de momento. Use PIX ou Cartão.");
+      return;
+    }
+
+    setIsFinalProcessing(true);
+    await new Promise(r => setTimeout(r, 1500));
+
+    if (method === 'CARD') {
+      firePixel('AddPaymentInfo', { value: finalTotal, currency: 'BRL', content_category: 'Card_Redirecionamento' });
+      window.location.href = 'https://mpago.la/1Q3SMNA';
+      return;
+    }
+
+    if (method === 'PIX') {
+      try {
+        const payload = {
+          amount: Number(finalTotal.toFixed(2)),
+          payerName: form.nome,
+          payerDocument: form.cpf.replace(/\D/g, ''),
+          transactionId: `MIND-${Date.now()}`,
+          description: `MindExpert - ${orderBump ? 'Kit Completo' : 'Frasco Unitário'}`
+        };
+
+        const response = await fetch('https://api.misticpay.com/api/transactions/create', {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Basic cGtfMDQ2MjI4YTllZmU3YWRlMDNmOTQxNzU0MjlmOTYzNzM6c2tfYTI1ZDc4MjkyNjYxMTM1MzUxYjc0MGQ1ZTI5NGYzMDllODg2MGRmNmJiMTg5N2FlMjI3MjcyNTc4ZTM1MmE0Yw==',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const responseData = await response.json();
+        
+        if (response.ok && responseData.data && responseData.data.qrCodeBase64) {
+          setFadeStep(false);
+          setTimeout(() => {
+            setPixData({ qr: responseData.data.qrCodeBase64, copiaCola: responseData.data.copyPaste });
+            setFadeStep(true);
+            firePixel('AddPaymentInfo', { value: finalTotal, currency: 'BRL', content_category: 'PIX_Gerado' });
+          }, 400);
+        } else {
+          alert(`Falha na comunicação com o banco. Verifique os dados.`);
         }
+      } catch (error) {
+        alert("Erro de ligação de rede.");
+      } finally {
+        setIsFinalProcessing(false);
+      }
+    }
+  };
 
-        async function processarPagamentoPix() {
-            const nome = document.getElementById('nomeCliente').value;
-            const cpf = document.getElementById('cpfCliente').value.replace(/\D/g, '');
-            const telefone = document.getElementById('telCliente').value;
+  const handleConfirmPixPayment = () => {
+    setIsCheckingPayment(true);
+    setTimeout(() => {
+      setIsCheckingPayment(false);
+      setOrderSuccess(true);
+      setGeneratedOrderCode(`ME-${Math.floor(100000 + Math.random() * 900000)}`);
+      setGeneratedTrackingCode(`BR${Math.floor(100000000 + Math.random() * 900000000)}BR`);
+      firePixel('Purchase', { value: finalTotal, currency: 'BRL', content_name: 'MindExpert' });
+    }, 3000);
+  };
 
-            if(!nome || !cpf || !telefone) {
-                alert('Por favor, preencha todos os campos.');
-                return;
-            }
+  if (orderSuccess) {
+    return (
+      <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-[#f4f5f7] flex flex-col items-center py-10 px-4 font-sans text-gray-800">
+        <div className="bg-white p-6 md:p-8 rounded-2xl shadow-sm max-w-lg w-full border border-gray-200 text-left">
+          <div className="flex items-center space-x-3 mb-6 border-b pb-4">
+             <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center text-green-600 shrink-0">
+               <Check size={28} />
+             </div>
+             <div>
+               <h2 className="text-xl font-bold text-gray-900 leading-tight">Pedido Realizado com Sucesso!</h2>
+               <p className="text-xs text-green-600 font-bold">Pagamento via PIX confirmado.</p>
+             </div>
+          </div>
 
-            const btn = document.getElementById('btnGerarPix');
-            btn.innerText = 'A GERAR PIX...';
-            btn.disabled = true;
+          <div className="space-y-4 text-sm text-gray-700">
+             <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 space-y-2">
+                <div className="flex justify-between"><span className="text-gray-500 font-semibold">Código do Pedido:</span><span className="font-mono font-bold text-zinc-900">{generatedOrderCode}</span></div>
+                <div className="flex justify-between"><span className="text-gray-500 font-semibold">Código de Rastreio:</span><span className="font-mono font-bold text-blue-600">{generatedTrackingCode}</span></div>
+                <div className="flex justify-between"><span className="text-gray-500 font-semibold">Produto:</span><span className="font-bold text-zinc-900">MindExpert Gotas</span></div>
+             </div>
 
-            try {
-                const payload = {
-                    amount: Number(valorSelecionado.toFixed(2)),
-                    payerName: nome,
-                    payerDocument: cpf,
-                    transactionId: `TADA-${Date.now()}`,
-                    description: `TadaSpray - ${produtoSelecionado}`
-                };
+             <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 space-y-1">
+                <p className="text-xs text-gray-400 uppercase font-bold mb-1">Dados de Entrega:</p>
+                <p className="font-semibold text-zinc-800">{form.nome}</p>
+                <p className="text-gray-600">{form.logradouro}, {form.numero} {form.complemento ? `- ${form.complemento}` : ''}</p>
+                <p className="text-gray-600">{form.bairro} — {form.cidade}/{form.uf} | CEP: {form.cep}</p>
+             </div>
 
-                const response = await fetch('https://api.misticpay.com/api/transactions/create', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': 'Basic cGtfMDQ2MjI4YTllZmU3YWRlMDNmOTQxNzU0MjlmOTYzNzM6c2tfYTI1ZDc4MjkyNjYxMTM1MzUxYjc0MGQ1ZTI5NGYzMDllODg2MGRmNmJiMTg5N2FlMjI3MjcyNTc4ZTM1MmE0Yw==',
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(payload)
-                });
+             <div className="bg-green-50 border border-green-200 p-4 rounded-xl text-green-800 text-xs md:text-sm font-medium flex items-start">
+                <Truck className="shrink-0 mr-3 text-green-600 mt-0.5" size={20}/>
+                <p>Você receberá todas as informações de envio e atualização de rastreio pelo seu <b>WhatsApp ({form.telefone})</b> em até <b>2 horas</b>.</p>
+             </div>
+          </div>
 
-                const data = await response.json();
+          <button onClick={() => window.location.href = '/'} className="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl text-sm transition-colors shadow-md">
+            Voltar para a Página Inicial
+          </button>
+        </div>
+      </div>
+    );
+  }
 
-                if(response.ok && data.data && data.data.qrCodeBase64) {
-                    copiaColaPixGlobal = data.data.copyPaste;
-                    document.getElementById('imgQrCode').src = data.data.qrCodeBase64;
-                    
-                    document.getElementById('formCheckoutArea').classList.add('hidden');
-                    document.getElementById('qrCodeArea').classList.remove('hidden');
+  if (isCheckingPayment) {
+    return (
+      <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-[#f4f5f7] flex flex-col items-center justify-center font-sans px-4">
+        <Loader2 className="w-12 h-12 text-blue-600 animate-spin mb-4" />
+        <h2 className="text-xl font-bold text-gray-800 mb-2">Verificando transação bancária...</h2>
+        <p className="text-sm text-gray-500 text-center">Aguarde enquanto confirmamos o recebimento do seu PIX.</p>
+      </div>
+    );
+  }
 
-                    if (typeof fbq === 'function') {
-                        fbq('track', 'AddPaymentInfo', { value: valorSelecionado, currency: 'BRL' });
-                    }
-                } else {
-                    alert('Erro ao gerar pagamento via MisticPay. Verifique os dados.');
-                }
-            } catch (err) {
-                alert('Erro de conexão com o gateway de pagamento.');
-            } finally {
-                btn.innerText = 'GERAR PIX AGORA';
-                btn.disabled = false;
-            }
-        }
+  if (pixData) {
+    const minutes = Math.floor(timeLeft / 60);
+    const seconds = timeLeft % 60;
 
-        function copiarCodigoPix() {
-            navigator.clipboard.writeText(copiaColaPixGlobal);
-            alert('Código PIX Copiado com sucesso!');
-        }
-    </script>
-</body>
-</html>
+    return (
+      <div className={`min-h-screen w-full max-w-full overflow-x-hidden bg-[#f4f5f7] flex flex-col items-center py-12 px-4 font-sans text-gray-800 transition-opacity duration-700 ease-in-out ${fadeStep ? 'opacity-100' : 'opacity-0'}`}>
+        <div className="bg-white p-6 md:p-8 rounded-2xl shadow-sm max-w-md w-full text-center border border-gray-200">
+          
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-2.5 rounded-xl mb-6 flex items-center justify-center space-x-2 shadow-sm">
+             <Clock size={18} className="animate-pulse shrink-0 text-red-500" />
+             <span className="text-xs font-bold uppercase tracking-wider">Aguardando Pagamento: {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}</span>
+          </div>
+
+          <h2 className="text-2xl font-bold mb-2 text-gray-800">Pague via PIX</h2>
+          <p className="text-gray-500 text-xs mb-5 leading-relaxed font-medium">Escaneie o QR Code abaixo com o aplicativo do seu banco ou utilize o código Copia e Cola.</p>
+          
+          <div className="bg-[#f8f9fa] p-4 rounded-xl border border-gray-200 mb-5 flex justify-center shadow-inner">
+            <img src={pixData.qr} alt="QR Code PIX" className="w-48 h-48 mix-blend-multiply" />
+          </div>
+
+          <p className="text-xs font-semibold text-gray-500 mb-1">Valor exato:</p>
+          <p className="font-black text-2xl text-[#20c997] mb-5">R$ {finalTotal.toFixed(2).replace('.', ',')}</p>
+          
+          <button onClick={() => { navigator.clipboard.writeText(pixData.copiaCola); alert('Código PIX Copiado com sucesso!'); }} className="w-full bg-zinc-900 hover:bg-black transition-colors text-white font-bold py-3.5 rounded-xl text-sm mb-4 shadow-sm">
+            COPIAR CÓDIGO COPIA E COLA
+          </button>
+
+          <div className="mt-4 pt-4 border-t border-gray-100">
+             <p className="text-[11px] text-gray-400 mb-3 leading-tight">O pagamento é reconhecido automaticamente. Assim que concluir no seu banco, clique no botão abaixo:</p>
+             <button 
+                onClick={handleConfirmPixPayment}
+                disabled={!canConfirmPix}
+                className={`w-full py-4 rounded-xl font-bold text-sm transition-all shadow-md ${canConfirmPix ? 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
+             >
+                {canConfirmPix ? 'JÁ PAGUEI' : 'Aguardando confirmação do banco...'}
+             </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-[#f4f5f7] font-sans text-gray-800 pb-16">
+      
+      <header className="bg-white border-b border-gray-200 h-[70px] flex items-center justify-center px-4 relative shadow-sm">
+         <Brain className="text-blue-600 absolute left-6" size={24} />
+         <span className="font-black text-lg text-zinc-800 tracking-wider">MINDEXPERT</span>
+         <Lock size={18} className="absolute right-6 text-gray-400" />
+      </header>
+
+      <div className="max-w-[600px] mx-auto w-full pt-8 px-4">
+        
+        <div className="flex items-center justify-between mb-10 relative px-4">
+          <div className="absolute top-[14px] left-0 w-full h-[2px] bg-gray-200 -z-10"></div>
+          
+          <div className="flex flex-col items-center bg-[#f4f5f7] px-2">
+            <div className={`w-[30px] h-[30px] rounded-full flex items-center justify-center text-xs font-bold mb-2 transition-colors duration-500 ${step >= 1 ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-200 text-gray-500'}`}>1</div>
+            <span className={`text-[11px] font-semibold text-center leading-tight transition-colors duration-500 ${step >= 1 ? 'text-blue-600' : 'text-gray-400'}`}>Dados</span>
+          </div>
+          <div className={`absolute top-[14px] left-[15%] w-[35%] h-[2px] -z-10 transition-colors duration-700 ease-in-out ${step >= 2 ? 'bg-blue-600' : 'bg-transparent'}`}></div>
+
+          <div className="flex flex-col items-center bg-[#f4f5f7] px-2">
+            <div className={`w-[30px] h-[30px] rounded-full flex items-center justify-center text-xs font-bold mb-2 transition-colors duration-500 ${step >= 2 ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-200 text-gray-500'}`}>2</div>
+            <span className={`text-[11px] font-semibold transition-colors duration-500 ${step >= 2 ? 'text-blue-600' : 'text-gray-400'}`}>Entrega</span>
+          </div>
+          <div className={`absolute top-[14px] left-[50%] w-[35%] h-[2px] -z-10 transition-colors duration-700 ease-in-out ${step >= 3 ? 'bg-blue-600' : 'bg-transparent'}`}></div>
+
+          <div className="flex flex-col items-center bg-[#f4f5f7] px-2">
+            <div className={`w-[30px] h-[30px] rounded-full flex items-center justify-center text-xs font-bold mb-2 transition-colors duration-500 ${step === 3 ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-200 text-gray-500'}`}>3</div>
+            <span className={`text-[11px] font-semibold transition-colors duration-500 ${step === 3 ? 'text-blue-600' : 'text-gray-400'}`}>Pagamento</span>
+          </div>
+        </div>
+
+        {/* RESUMO DO PEDIDO */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6 overflow-hidden">
+           <div className="p-4 md:p-5 flex items-start space-x-3 md:space-x-4">
+              <div className="w-[60px] md:w-[72px] h-[60px] md:h-[72px] bg-white shrink-0 flex items-center justify-center rounded border border-gray-100 p-1">
+                 <img src="/produto.webp" alt="MindExpert" className="max-h-full object-contain" />
+              </div>
+              <div className="flex-1">
+                 <h3 className="text-[14px] md:text-[15px] font-semibold text-gray-800">MindExpert Gotas (Tratamento 3 Meses)</h3>
+                 <p className="text-[14px] md:text-[15px] font-bold text-gray-900 mt-1">R$ {basePrice.toFixed(2).replace('.', ',')}</p>
+                 <div className="flex items-center mt-2 w-[90px] border border-gray-300 rounded bg-gray-50 h-8">
+                    <button className="px-3 py-1 text-gray-400 hover:text-gray-700 font-semibold">—</button>
+                    <input type="text" value="1" readOnly className="w-full bg-transparent text-center text-xs font-semibold outline-none" />
+                    <button className="px-3 py-1 text-gray-400 hover:text-gray-700 font-semibold">+</button>
+                 </div>
+              </div>
+           </div>
+
+           <div className="px-4 md:px-5 py-4 border-t border-gray-100 bg-[#fafafa]">
+              <p className="text-xs text-gray-500 mb-2 font-medium">Tem um cupom de desconto?</p>
+              <div className="flex space-x-2">
+                 <div className="relative flex-1">
+                    <input type="text" placeholder="Código do cupom" className="w-full pl-3 pr-3 py-2 border border-gray-300 rounded text-sm outline-none focus:border-blue-600 bg-white transition-colors" />
+                 </div>
+                 <button className="text-blue-600 font-semibold text-sm px-3 hover:underline">Adicionar</button>
+              </div>
+           </div>
+
+           <div className="px-4 md:px-5 py-5 border-t border-gray-100">
+              <div className="flex justify-between text-[13px] md:text-sm text-gray-600 mb-3 font-medium">
+                 <span>Produtos</span>
+                 <span>R$ {basePrice.toFixed(2).replace('.', ',')}</span>
+              </div>
+              {orderBump && (
+                <div className="flex justify-between text-[13px] md:text-sm text-gray-600 mb-3 font-medium">
+                   <span>+ Frasco Extra de Apoio</span>
+                   <span>R$ {bumpPrice.toFixed(2).replace('.', ',')}</span>
+                </div>
+              )}
+              {step >= 3 && (
+                <div className="flex justify-between text-[13px] md:text-sm text-gray-600 mb-3 font-medium">
+                   <span>Frete</span>
+                   <span>{shippingPrice === 0 ? 'Grátis' : `R$ ${shippingPrice.toFixed(2).replace('.', ',')}`}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-[16px] md:text-[17px] font-bold text-gray-900 mt-4 pt-4 border-t border-gray-100">
+                 <span className="text-blue-600">Total</span>
+                 <span className="text-blue-600">R$ {finalTotal.toFixed(2).replace('.', ',')}</span>
+              </div>
+           </div>
+        </div>
+
+        {/* CONTAINER DOS FORMULÁRIOS COM FADE */}
+        <div className={`bg-white rounded-lg shadow-sm border border-gray-200 transition-opacity duration-300 ease-in-out ${fadeStep ? 'opacity-100' : 'opacity-0'}`}>
+          
+          {/* PASSO 1: IDENTIFICAÇÃO */}
+          {step === 1 && (
+            <div className="p-5 md:p-6">
+              <h2 className="text-xl md:text-[22px] font-bold text-gray-800 mb-2 flex items-center">
+                <span className="w-6 h-6 md:w-[28px] md:h-[28px] bg-gray-800 text-white rounded-full flex items-center justify-center text-xs md:text-sm mr-2 md:mr-3 font-bold">1</span> Identificação
+              </h2>
+              <p className="text-xs md:text-[13px] text-gray-500 mb-6 leading-relaxed font-medium">Utilizaremos seu e-mail para rastreio, notificações de envio e acesso ao pedido.</p>
+              
+              <div className="space-y-4 md:space-y-5">
+                <div>
+                  <label className="block text-xs md:text-[13px] font-semibold text-gray-700 mb-1 md:mb-1.5">Nome completo</label>
+                  <div className="relative">
+                    <input type="text" value={form.nome} onChange={e=>setForm({...form, nome: e.target.value})} placeholder="ex.: Carlos Silva" className={`w-full border h-11 md:h-12 px-3 md:px-4 rounded outline-none transition-colors text-sm text-gray-700 ${form.nome.length > 3 ? 'border-green-500 bg-[#f9fffb]' : 'border-gray-300 bg-white focus:border-blue-600'}`} />
+                    {form.nome.length > 3 && <CheckCircle size={20} className="absolute right-3 top-3 md:right-4 md:top-[14px] text-green-500" />}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs md:text-[13px] font-semibold text-gray-700 mb-1 md:mb-1.5">E-mail</label>
+                  <div className="relative">
+                    <input type="email" value={form.email} onChange={e=>setForm({...form, email: e.target.value})} placeholder="ex.: carlos@gmail.com" className={`w-full border h-11 md:h-12 px-3 md:px-4 rounded outline-none transition-colors text-sm text-gray-700 ${form.email.includes('@') ? 'border-green-500 bg-[#f9fffb]' : 'border-gray-300 bg-white focus:border-blue-600'}`} />
+                    {form.email.includes('@') && <CheckCircle size={20} className="absolute right-3 top-3 md:right-4 md:top-[14px] text-green-500" />}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs md:text-[13px] font-semibold text-gray-700 mb-1 md:mb-1.5">CPF</label>
+                  <div className="relative">
+                    <input type="text" value={form.cpf} onChange={e=>setForm({...form, cpf: maskCPF(e.target.value)})} maxLength={14} placeholder="000.000.000-00" className={`w-full border h-11 md:h-12 px-3 md:px-4 rounded outline-none transition-colors text-sm text-gray-700 ${isValidCPF(form.cpf) ? 'border-green-500 bg-[#f9fffb]' : 'border-gray-300 bg-white focus:border-blue-600'}`} />
+                    {isValidCPF(form.cpf) && <CheckCircle size={20} className="absolute right-3 top-3 md:right-4 md:top-[14px] text-green-500" />}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs md:text-[13px] font-semibold text-gray-700 mb-1 md:mb-1.5">Celular / WhatsApp</label>
+                  <div className="flex space-x-2 md:space-x-3">
+                    <input type="text" value="+55" readOnly className="w-14 md:w-16 border border-gray-300 bg-gray-50 h-11 md:h-12 rounded text-center text-sm font-semibold text-gray-600 outline-none" />
+                    <div className="relative flex-1">
+                      <input type="text" value={form.telefone} onChange={e=>setForm({...form, telefone: maskPhone(e.target.value)})} maxLength={15} placeholder="(00) 00000-0000" className={`w-full border h-11 md:h-12 px-3 md:px-4 rounded outline-none transition-colors text-sm text-gray-700 ${form.telefone.length >= 14 ? 'border-green-500 bg-[#f9fffb]' : 'border-gray-300 bg-white focus:border-blue-600'}`} />
+                      {form.telefone.length >= 14 && <CheckCircle size={20} className="absolute right-3 top-3 md:right-4 md:top-[14px] text-green-500" />}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 bg-[#f4fbf7] border border-[#d2f3e0] text-[#1b7f44] text-xs md:text-[13px] font-medium p-3 md:p-4 rounded flex items-center justify-center">
+                 <QrCode size={18} className="mr-2 opacity-80 shrink-0" /> Você ganhou <span className="mx-1 font-bold">5% de desconto</span> pagando com Pix
+              </div>
+
+              <button onClick={handleNextStep1} disabled={isBtnLoading1} className="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-semibold h-12 md:h-[52px] rounded text-sm md:text-[15px] transition-all flex items-center justify-center shadow-md">
+                {isBtnLoading1 ? <Loader2 className="animate-spin" size={22} /> : "Ir para Entrega"}
+              </button>
+            </div>
+          )}
+
+          {/* PASSO 2: ENTREGA */}
+          {step === 2 && (
+            <div className="p-5 md:p-6">
+               <div className="flex items-center justify-between mb-6">
+                 <h2 className="text-xl md:text-[22px] font-bold text-gray-800 flex items-center"><span className="w-6 h-6 md:w-[28px] md:h-[28px] bg-gray-800 text-white rounded-full flex items-center justify-center text-xs md:text-sm mr-2 md:mr-3 font-bold">2</span> Entrega</h2>
+                 <button onClick={()=>changeStepSmoothly(1)} className="text-xs md:text-[13px] text-blue-600 font-semibold hover:underline">Voltar</button>
+               </div>
+               
+               <p className="text-xs md:text-[13px] text-gray-600 mb-5 font-medium">Cadastre ou selecione um endereço</p>
+
+               <div className="space-y-4 md:space-y-5">
+                 <div>
+                   <label className="block text-xs md:text-[13px] font-semibold text-gray-700 mb-1 md:mb-1.5">CEP</label>
+                   <div className="relative">
+                     <input type="text" value={form.cep} onChange={e=>handleCep(e.target.value)} maxLength={9} className="w-full border border-gray-300 h-11 md:h-12 px-3 md:px-4 rounded outline-none focus:border-blue-600 text-sm text-gray-700" placeholder="00000-000" />
+                     {isLoadingCep && <span className="absolute right-3 top-3 md:right-4 md:top-[14px] text-[11px] md:text-[12px] text-blue-600 font-semibold animate-pulse">Buscando...</span>}
+                     {form.cep.length === 9 && !isLoadingCep && <CheckCircle size={20} className="absolute right-3 top-3 md:right-4 md:top-[14px] text-green-500" />}
+                   </div>
+                 </div>
+
+                 <div className={`space-y-4 md:space-y-5 transition-all duration-500 overflow-hidden ${form.logradouro ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                    <div>
+                      <label className="block text-xs md:text-[13px] font-semibold text-gray-700 mb-1 md:mb-1.5">Endereço</label>
+                      <div className="relative">
+                        <input type="text" value={form.logradouro} onChange={e=>setForm({...form, logradouro: e.target.value})} className="w-full border border-gray-300 h-11 md:h-12 px-3 md:px-4 rounded outline-none focus:border-blue-600 text-sm text-gray-700" />
+                        {form.logradouro && <CheckCircle size={20} className="absolute right-3 top-3 md:right-4 md:top-[14px] text-green-500" />}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 md:gap-4">
+                      <div>
+                        <label className="block text-xs md:text-[13px] font-semibold text-gray-700 mb-1 md:mb-1.5">Número</label>
+                        <div className="relative">
+                           <input type="text" value={form.numero} onChange={e=>setForm({...form, numero: e.target.value})} className={`w-full border h-11 md:h-12 px-3 md:px-4 rounded outline-none focus:border-blue-600 text-sm text-gray-700 ${form.numero ? 'border-green-500 bg-[#f9fffb]' : 'border-gray-300'}`} placeholder="Ex: 561" />
+                           {form.numero && <CheckCircle size={20} className="absolute right-3 top-3 md:right-4 md:top-[14px] text-green-500" />}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs md:text-[13px] font-semibold text-gray-700 mb-1 md:mb-1.5">Bairro</label>
+                        <div className="relative">
+                          <input type="text" value={form.bairro} onChange={e=>setForm({...form, bairro: e.target.value})} className="w-full border border-gray-300 h-11 md:h-12 px-3 md:px-4 rounded outline-none focus:border-blue-600 text-sm text-gray-700" />
+                          {form.bairro && <CheckCircle size={20} className="absolute right-3 top-3 md:right-4 md:top-[14px] text-green-500" />}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs md:text-[13px] font-semibold text-gray-700 mb-1 md:mb-1.5">Complemento <span className="font-normal text-gray-400">(opcional)</span></label>
+                      <input type="text" value={form.complemento} onChange={e=>setForm({...form, complemento: e.target.value})} className="w-full border border-gray-300 h-11 md:h-12 px-3 md:px-4 rounded outline-none focus:border-blue-600 text-sm text-gray-700" />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs md:text-[13px] font-semibold text-gray-700 mb-1 md:mb-1.5">Destinatário</label>
+                      <div className="relative">
+                        <input type="text" value={form.nome} readOnly className="w-full border border-gray-300 h-11 md:h-12 px-3 md:px-4 rounded text-sm bg-gray-50 text-gray-500 outline-none" />
+                        <CheckCircle size={20} className="absolute right-3 top-3 md:right-4 md:top-[14px] text-green-500" />
+                      </div>
+                    </div>
+                 </div>
+
+                 <div className={`transition-all duration-500 ${form.logradouro ? 'opacity-100 mt-6 md:mt-8' : 'opacity-0 h-0 overflow-hidden'}`}>
+                   <p className="text-xs md:text-[13px] text-gray-700 font-semibold mb-3">Escolha uma forma de entrega:</p>
+                   <div className="space-y-3">
+                     <label className={`border rounded-lg p-3 md:p-4 flex items-center justify-between cursor-pointer transition-colors ${shippingMethod === 'CORREIOS' ? 'border-gray-800 bg-gray-50' : 'border-gray-300 hover:border-gray-400'}`}>
+                        <div className="flex items-center">
+                          <div className={`w-[16px] md:w-[18px] h-[16px] md:h-[18px] rounded-full border mr-3 flex items-center justify-center shrink-0 ${shippingMethod === 'CORREIOS' ? 'border-gray-800' : 'border-gray-300'}`}>
+                            {shippingMethod === 'CORREIOS' && <div className="w-2 h-2 md:w-2.5 md:h-2.5 rounded-full bg-gray-800"></div>}
+                          </div>
+                          <div>
+                            <p className="text-xs md:text-[14px] font-bold text-gray-800 leading-tight">CORREIOS - Prazo de 2 a 6 dias</p>
+                            <p className="text-[10px] md:text-xs text-gray-500 mt-1">Entrega garantida</p>
+                          </div>
+                        </div>
+                        <span className="text-xs md:text-[14px] font-bold text-green-600">Grátis</span>
+                     </label>
+
+                     <label className={`border rounded-lg p-3 md:p-4 flex items-center justify-between cursor-pointer transition-colors ${shippingMethod === 'TRANSPORTADORA' ? 'border-gray-800 bg-gray-50' : 'border-gray-300 hover:border-gray-400'}`}>
+                        <div className="flex items-center">
+                          <div className={`w-[16px] md:w-[18px] h-[16px] md:h-[18px] rounded-full border mr-3 flex items-center justify-center shrink-0 ${shippingMethod === 'TRANSPORTADORA' ? 'border-gray-800' : 'border-gray-300'}`}>
+                            {shippingMethod === 'TRANSPORTADORA' && <div className="w-2 h-2 md:w-2.5 md:h-2.5 rounded-full bg-gray-800"></div>}
+                          </div>
+                          <div>
+                            <p className="text-xs md:text-[14px] font-bold text-gray-800 leading-tight">TRANSPORTADORA - Prazo de 1 a 4 dias</p>
+                            <p className="text-[10px] md:text-xs text-gray-500 mt-1">Entrega expressa</p>
+                          </div>
+                        </div>
+                        <span className="text-xs md:text-[14px] font-bold text-gray-800">R$ 9,90</span>
+                     </label>
+                   </div>
+                 </div>
+
+               </div>
+
+               <button onClick={handleNextStep2} disabled={isBtnLoading2 || !form.numero} className={`w-full mt-6 md:mt-8 text-white font-semibold h-12 md:h-[52px] rounded text-sm md:text-[15px] transition-all flex items-center justify-center ${!form.numero ? 'bg-blue-300 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 shadow-md'}`}>
+                 {isBtnLoading2 ? <Loader2 className="animate-spin" size={22} /> : "Continuar"}
+               </button>
+            </div>
+          )}
+
+          {/* PASSO 3: PAGAMENTO */}
+          {step === 3 && (
+            <div className="p-5 md:p-6">
+               <div className="flex items-center justify-between mb-5 md:mb-6">
+                 <h2 className="text-xl md:text-[22px] font-bold text-gray-800 flex items-center"><span className="w-6 h-6 md:w-[28px] md:h-[28px] bg-gray-800 text-white rounded-full flex items-center justify-center text-xs md:text-sm mr-2 md:mr-3 font-bold">3</span> Pagamento</h2>
+                 <button onClick={()=>changeStepSmoothly(2)} className="text-xs md:text-[13px] text-blue-600 font-semibold hover:underline">Voltar</button>
+               </div>
+               <p className="text-xs md:text-[13px] text-gray-600 mb-5 font-medium">Escolha uma forma de pagamento</p>
+
+               <div className="space-y-3 md:space-y-4">
+                 {/* CARTÃO */}
+                 <div className={`border rounded-lg overflow-hidden transition-all duration-300 ${method === 'CARD' ? 'border-gray-800 bg-white shadow-sm' : 'border-gray-300 bg-white hover:border-gray-400'}`}>
+                   <button onClick={()=>setMethod('CARD')} className="w-full p-3 md:p-4 flex items-center justify-between bg-white text-left">
+                     <div className="flex items-center">
+                        <div className={`w-4 h-4 md:w-[18px] md:h-[18px] rounded-full border mr-2 md:mr-3 flex items-center justify-center shrink-0 ${method === 'CARD' ? 'border-gray-800' : 'border-gray-300'}`}>
+                          {method === 'CARD' && <div className="w-2 h-2 md:w-2.5 md:h-2.5 rounded-full bg-gray-800"></div>}
+                        </div>
+                        <span className="font-bold text-gray-800 text-[13px] md:text-[14px]">Cartão de crédito</span>
+                     </div>
+                     <div className="flex space-x-1 md:space-x-1.5 opacity-70">
+                        <span className="hidden sm:inline-block text-[8px] md:text-[9px] border border-gray-200 px-1 md:px-1.5 py-0.5 rounded text-blue-800 font-bold">AMEX</span>
+                        <span className="text-[8px] md:text-[9px] border border-gray-200 px-1 md:px-1.5 py-0.5 rounded text-blue-700 font-bold">VISA</span>
+                        <span className="text-[8px] md:text-[9px] border border-gray-200 px-1 md:px-1.5 py-0.5 rounded text-red-600 font-bold">MASTER</span>
+                     </div>
+                   </button>
+                   
+                   <div className={`overflow-hidden transition-all duration-500 ease-in-out ${method === 'CARD' ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                     <div className="p-4 md:p-5 border-t border-gray-100 bg-[#fbfbfc]">
+                        <p className="text-xs md:text-[13px] text-gray-600 mb-4 leading-relaxed font-medium">Ao clicar em finalizar, será redirecionado para o ambiente seguro do Mercado Pago.</p>
+                     </div>
+                   </div>
+                 </div>
+
+                 {/* PIX */}
+                 <div className={`border rounded-lg overflow-hidden transition-all duration-300 ${method === 'PIX' ? 'border-gray-800 bg-white shadow-sm' : 'border-gray-300 bg-white hover:border-gray-400'}`}>
+                   <button onClick={()=>setMethod('PIX')} className="w-full p-3 md:p-4 flex items-center justify-between bg-white text-left">
+                     <div className="flex items-center">
+                        <div className={`w-4 h-4 md:w-[18px] md:h-[18px] rounded-full border mr-2 md:mr-3 flex items-center justify-center shrink-0 ${method === 'PIX' ? 'border-gray-800' : 'border-gray-300'}`}>
+                          {method === 'PIX' && <div className="w-2 h-2 md:w-2.5 md:h-2.5 rounded-full bg-gray-800"></div>}
+                        </div>
+                        <QrCode size={18} className="mr-2 text-gray-700 hidden sm:block"/>
+                        <span className="font-bold text-gray-800 text-[13px] md:text-[14px]">Pix</span>
+                     </div>
+                     <span className="bg-[#7b61ff] text-white text-[9px] md:text-[10px] font-bold px-2 md:px-2.5 py-1 rounded uppercase tracking-wider">5% DE DESCONTO</span>
+                   </button>
+                   
+                   <div className={`overflow-hidden transition-all duration-500 ease-in-out ${method === 'PIX' ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                     <div className="p-4 md:p-5 border-t border-gray-100 bg-[#fbfbfc]">
+                        <p className="text-xs md:text-[13px] font-medium text-gray-700 mb-3 leading-relaxed">A confirmação de pagamento é realizada em poucos minutos. Utilize o aplicativo do seu banco para pagar.</p>
+                        <p className="text-sm md:text-[15px] font-black text-[#20c997] mb-5">Valor no Pix: R$ {finalTotal.toFixed(2).replace('.', ',')}</p>
+                        
+                        <div className="bg-[#fcfee4] border border-dashed border-[#dce082] rounded-lg p-4 md:p-5 mb-2 text-left relative shadow-sm">
+                           <div className="flex justify-center mb-4">
+                             <span className="bg-white border border-[#dce082] text-[10px] md:text-[11px] font-black px-3 py-1 rounded-full text-gray-700 shadow-sm flex items-center"><span className="mr-1 text-sm md:text-base">🎉</span> VOCÊ TEM 1 OFERTA!</span>
+                           </div>
+                           <div className="flex items-start space-x-3 md:space-x-4 mb-4 border-b border-dashed border-[#dce082] pb-4">
+                              <div className="w-14 h-14 md:w-16 md:h-16 bg-white rounded border border-gray-200 p-1 shrink-0 flex items-center justify-center shadow-sm">
+                                 <img src="/produto-bump.jpg" alt="Extra" className="w-full h-full object-contain" onError={(e)=>e.currentTarget.src='/produto.webp'}/>
+                              </div>
+                              <div>
+                                 <h4 className="text-xs md:text-[14px] font-bold text-gray-800 leading-tight mb-1">Frasco Extra de Apoio</h4>
+                                 <div className="flex items-center space-x-2">
+                                    <p className="text-[11px] md:text-[13px] text-gray-500 line-through">R$ 197,00</p>
+                                    <p className="text-sm md:text-[15px] font-black text-gray-900">R$ {bumpPrice.toFixed(2).replace('.', ',')}</p>
+                                 </div>
+                              </div>
+                           </div>
+                           <h5 className="font-bold text-xs md:text-[14px] text-gray-800 mb-1 md:mb-1.5">Oferta Exclusiva! - 50% OFF</h5>
+                           <p className="text-xs md:text-[13px] text-gray-600 mb-4 md:mb-5 leading-relaxed font-medium">Leve mais um frasco por um valor promocional exclusivo.</p>
+                           
+                           <button onClick={()=>setOrderBump(!orderBump)} className={`w-full font-bold h-11 md:h-[50px] rounded flex items-center justify-center transition-colors text-xs md:text-[14px] shadow-sm ${orderBump ? 'bg-green-500 text-white border-b-4 border-green-700' : 'bg-blue-600 hover:bg-blue-700 text-white border-b-4 border-blue-800'}`}>
+                             <div className={`w-4 h-4 md:w-[18px] md:h-[18px] rounded-sm flex items-center justify-center mr-2 border-2 ${orderBump ? 'bg-white border-white text-green-500' : 'border-white/60 bg-white/20'}`}>
+                               {orderBump && <CheckCircle size={14} />}
+                             </div>
+                             {orderBump ? 'Oferta Adicionada!' : '+ Adicionar oferta'}
+                           </button>
+                        </div>
+                     </div>
+                   </div>
+                 </div>
+
+               </div>
+
+               <button onClick={async () => {
+                 if (method === 'CARD') {
+                   setIsFinalProcessing(true);
+                   await new Promise(r => setTimeout(r, 1500));
+                   firePixel('AddPaymentInfo', { value: finalTotal, currency: 'BRL', content_category: 'Card_Redirecionamento' });
+                   window.location.href = 'https://mpago.la/1Q3SMNA';
+                   return;
+                 }
+                 handleCheckout();
+               }} disabled={isFinalProcessing} className="w-full mt-6 md:mt-7 bg-blue-600 hover:bg-blue-700 text-white font-semibold h-12 md:h-[56px] rounded text-sm md:text-[16px] transition-colors shadow-md flex items-center justify-center disabled:bg-blue-300">
+                  {isFinalProcessing ? <Loader2 className="animate-spin mr-2 md:mr-3" size={20} /> : null}
+                  {isFinalProcessing ? 'A processar pagamento...' : 'Finalizar compra'}
+               </button>
+            </div>
+          )}
+        </div>
+
+        <div className="mt-8 md:mt-10 mb-8 text-center flex flex-col items-center">
+           <p className="mb-2 text-[10px] md:text-[11px] font-bold text-gray-400 uppercase">Formas de pagamento</p>
+           <div className="flex space-x-1 md:space-x-1.5 opacity-70 mb-6 justify-center flex-wrap gap-y-1.5">
+               <span className="text-[9px] md:text-[10px] border border-gray-300 px-1.5 md:px-2 py-0.5 rounded font-bold text-gray-600">PIX</span>
+               <span className="text-[9px] md:text-[10px] border border-gray-300 px-1.5 md:px-2 py-0.5 rounded font-bold text-blue-800">AMEX</span>
+               <span className="text-[9px] md:text-[10px] border border-gray-300 px-1.5 md:px-2 py-0.5 rounded font-bold text-blue-700">VISA</span>
+               <span className="text-[9px] md:text-[10px] border border-gray-300 px-1.5 md:px-2 py-0.5 rounded font-bold text-red-600">MASTER</span>
+           </div>
+           
+           <p className="font-bold text-xs md:text-[13px] text-gray-500 mb-1">mindexpert.com.br</p>
+           <p className="mb-4 text-[10px] text-gray-400">© {new Date().getFullYear()} MindExpert - CNPJ: 45.123.456/0001-89</p>
+           
+           <div className="flex items-center text-gray-500 font-bold mt-2 border-t border-gray-200 pt-5 w-full justify-center">
+             <Lock size={14} className="mr-2 text-gray-400" />
+             <div className="text-left">
+               <span className="block leading-[1.1] text-[9px] md:text-[11px] tracking-wide">PAGAMENTO</span>
+               <span className="block leading-[1.1] text-[9px] md:text-[11px] tracking-wide">100% SEGURO</span>
+             </div>
+           </div>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+function CheckoutOrSales() {
+  const [screen, setScreen] = useState<'SALES' | 'LOADER' | 'CHECKOUT'>('SALES');
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+
+    if (!document.getElementById('fb-pixel-script')) {
+      const fbScript = document.createElement("script");
+      fbScript.id = "fb-pixel-script";
+      fbScript.innerHTML = `
+        !function(f,b,e,v,n,t,s)
+        {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+        n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+        if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+        n.queue=[];t=b.createElement(e);t.async=!0;
+        t.src=v;s=b.getElementsByTagName(e)[0];
+        s.parentNode.insertBefore(t,s)}(window, document,'script',
+        'https://connect.facebook.net/en_US/fbevents.js');
+        fbq('init', '1393258875780065');
+        fbq('track', 'PageView');
+      `;
+      document.head.appendChild(fbScript);
+    }
+
+    if (!document.getElementById('clarity-script')) {
+      const clarityScript = document.createElement("script");
+      clarityScript.id = "clarity-script";
+      clarityScript.innerHTML = `
+        (function(c,l,a,r,i,t,y){
+            c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+            t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+            y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+        })(window, document, "clarity", "script", "ypx7bo1cy7");
+      `;
+      document.head.appendChild(clarityScript);
+    }
+  }, []);
+
+  if (screen === "CHECKOUT") return <CheckoutYampiScreen />;
+  if (screen === "LOADER") return <CheckoutLoader onLoaded={() => setScreen("CHECKOUT")} />;
+  return <SalesPage onBuy={() => setScreen("LOADER")} />;
+}
